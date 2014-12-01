@@ -67,10 +67,7 @@ always@(posedge Clock, negedge Resetn)
 						counter<=counter+Score;
 					end
 			end
-end
-				
-				
-				
+	end
 endmodule
 				
 						
@@ -85,7 +82,6 @@ module upcounter_slot(Clock,output_clk,Stop,Resetn,Number);
 	parameter A=2'b00,B=2'b01;
 	
 	//Define next state combinational circuit
-	
 	always@(Stop,y)
 	
 		case (y)
@@ -126,8 +122,6 @@ endmodule
 // Determine which segment should light up based on signalIn
 module seg7(signalIn,ledOut);
 
-//creates a 4 value input vector and 7 outputs
-	
 	input [2:0]signalIn;
 	output reg [6:0]ledOut;
 
