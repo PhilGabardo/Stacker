@@ -9,15 +9,27 @@ wire Score;
 wire [2:0]Number_out;
 assign Score=5;
 
+
+//Generate a clock with a new frequency (dependent on score)
 variableClock var_clk(Clock,Score,Resetn,output_clk);
+
+//Initialize counters
 upcounter_slot num1(Clock,output_clk,Stop3,Resetn,Number);
 upcounter_slot num2(Clock,output_clk,Stop2,Resetn,Number2);
 upcounter_slot num3(Clock,output_clk,Stop1,Resetn,Number3);
 upcounter_slot num4(Clock,output_clk,Stop0,Resetn,Number4);
+
+//Game play
 levelstate level(compare_out, Stop, Resetn, x2, x3, x4, score_count);
+
+// Light first hex7seg
 seg7 Display1(Number[2:0],SegmentDisplay1[0:6]);
+
+//Register which segment was chosen
 register reg1(Number[2:0], Stop, Number_out[2:0]);
 compare comp1(Number_out[2:0], Number2[2:0],Stop, compare_out);
+
+// Move to next segments
 seg7next Display2(Number2[2:0],x2,SegmentDisplay2[0:6]);
 seg7next Display3(Number3[2:0],x3,SegmentDisplay3[0:6]);
 seg7next Display4(Number4[2:0],x4,SegmentDisplay4[0:6]);
@@ -34,6 +46,8 @@ output reg output_clk;
 
 reg[31:0]counter;
 
+// The generated clock (output_clk) will switch edges when counter reaches 10000000. Counter is incremented by the score
+// (the clock will get faster as the score increases). 
 always@(posedge Clock, negedge Resetn)
 	begin
 		if(!Resetn)
@@ -62,6 +76,7 @@ endmodule
 						
 
 
+// Determine the segment number that is lit up. Unless the user hits stop, the segment is increased (the number will overflow)
 module upcounter_slot(Clock,output_clk,Stop,Resetn,Number);
 	
 	input Clock,Stop,Resetn,output_clk;
@@ -108,6 +123,7 @@ module upcounter_slot(Clock,output_clk,Stop,Resetn,Number);
 endmodule
 
 
+// Determine which segment should light up based on signalIn
 module seg7(signalIn,ledOut);
 
 //creates a 4 value input vector and 7 outputs
@@ -131,6 +147,8 @@ module seg7(signalIn,ledOut);
 		endcase
 endmodule
 
+
+// Determine which segment should light up based on signalIn. No segments are lit up unless x is 1.
 module seg7next(signalIn,x,ledOut);
    input x;
 	input [2:0]signalIn;
@@ -155,7 +173,7 @@ module seg7next(signalIn,x,ledOut);
 		ledOut = 7'b1111111;
 endmodule
 
-
+//State machine for game logic
 module levelstate(compare_out, Clock, Resetn, x2, x3, x4, score_count);
   input compare_out, Resetn;
   input Clock;
@@ -167,7 +185,10 @@ module levelstate(compare_out, Clock, Resetn, x2, x3, x4, score_count);
   always @(compare_out, y)
   begin
   case(y)
+   // First state (place first block)
     A:Y=B;
+    
+    // Move onto next state unless user does not stack block
 	 B:if(compare_out) Y=C;
 	   else Y=A;
 	 C:if(compare_out) Y=D;
@@ -177,12 +198,17 @@ module levelstate(compare_out, Clock, Resetn, x2, x3, x4, score_count);
 	 E: Y=B;
 	 default: Y=2'bxx;
 	endcase
+	
+	// Define which hex7segs are lit up based on the state
 	x2=(y==B || y==C || y==D);
 	x3=(y==C || y==D);
 	x4=(y==D);
+	
+	// Determine level
 	score_count=(y==E);
 	end
 	
+	// Reset game
 	always @(posedge Clock, negedge Resetn)
 	if (Resetn==0)
 	y<=A;
@@ -190,6 +216,7 @@ module levelstate(compare_out, Clock, Resetn, x2, x3, x4, score_count);
 	y<=Y;
 endmodule
 
+// Compare two 3 bit inputs on a clock edge and assign result to compare_out
 module compare(x1, x2,Clock, compare_out);
    input [2:0]x1, x2;
 	input Clock;
@@ -199,7 +226,7 @@ module compare(x1, x2,Clock, compare_out);
 	compare_out <= (x1 == x2);
 endmodule
 
-
+//Save x in x_reg on clock posedge
 module register(x,Clock, x_reg);
 input [2:0]x;
 input Clock;
